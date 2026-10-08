@@ -1,0 +1,8 @@
+{
+  "name": "snow-auto-patch-tests",
+  "private": true,
+  "version": "1.0.0",
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test tests/subscription.test.js" },
+  "devDependencies": { "js-yaml": "4.1.1" }
+}

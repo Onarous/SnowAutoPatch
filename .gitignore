@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+node_modules/
+state/
+backups/
+runtime/
+config.json
+autopatch.log
+.install-*/
+snow-autopatch-test-*/
