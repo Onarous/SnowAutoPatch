@@ -1,6 +1,28 @@
 "use strict";
 
-const yaml = require("js-yaml");
+// js-yaml приезжает вместе с патчем (payload/js-yaml.js): в Linux-клиенте нет
+// node_modules, а на Windows модуль берётся из комплекта клиента.
+//
+// Порядок: сначала пробуем вендорский node_modules (Windows-клиент), если его
+// нет — берём приложенный рядом модуль (Linux-клиент). Оба варианта — один и
+// тот же API js-yaml 4.x.
+let yaml;
+try {
+  yaml = require("js-yaml");
+} catch (_) {
+  yaml = require("./js-yaml");
+}
+
+// VLESS-ссылки: на Windows в коде клиента есть свой парсер (parseVlessLink),
+// и там приоритет отдаётся ему. На Linux клиента такого парсера нет, поэтому
+// используем приложенный.
+let parseVlessLink;
+try {
+  const native = require("./vless");
+  parseVlessLink = native.parseVlessLink;
+} catch (_) {
+  parseVlessLink = null;
+}
 
 function profileFromProxies(proxies) {
   const names = new Set();
@@ -244,14 +266,17 @@ function convertLinks(links, text, parseVless) {
 }
 
 function normalizeSubscriptionText(value, parseVless) {
+  // Парсер берём из аргумента (Windows-клиент передаёт свой, более полный
+  // parseVlessLink), а если его нет — берём приложенный.
+  const parser = parseVless || parseVlessLink;
   const text = String(value || "").replace(/^\uFEFF/, "");
-  const inspected = inspectText(text, parseVless);
+  const inspected = inspectText(text, parser);
   if (inspected) return inspected;
   const base64 = text.replace(/\s/g, "");
   if (base64.length >= 16 && /^[A-Za-z0-9+/_-]+={0,2}$/.test(base64) && base64.length % 4 !== 1) {
     const decoded = Buffer.from(base64, "base64").toString("utf8");
     if (!decoded.includes("\uFFFD")) {
-      const result = inspectText(decoded, parseVless);
+      const result = inspectText(decoded, parser);
       if (result) return { ...result, format: "Base64 " + (result.format || "profile") };
     }
   }
@@ -259,4 +284,4 @@ function normalizeSubscriptionText(value, parseVless) {
   return { text, needsClash: false };
 }
 
-module.exports = { normalizeSubscriptionText };
+module.exports = { normalizeSubscriptionText, parseVlessLink };
