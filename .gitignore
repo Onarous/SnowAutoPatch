@@ -8,3 +8,4 @@ config.json
 autopatch.log
 .install-*/
 snow-autopatch-test-*/
+snow-autopatch-linux-test-*/

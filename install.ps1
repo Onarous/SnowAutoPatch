@@ -101,13 +101,16 @@ try {
             Wait-Watcher $installRoot
         }
     }
-    foreach ($file in @('autopatch.py', 'Install-AutoPatch.ps1', 'Disable-AutoPatch.ps1', 'Patch-Now.cmd', 'README.md', 'runtimes.json')) {
+    foreach ($file in @('autopatch.py', 'patch_recipes.py', 'Install-AutoPatch.ps1', 'Disable-AutoPatch.ps1', 'Patch-Now.cmd', 'README.md', 'runtimes.json')) {
         Copy-Item -LiteralPath (Join-Path $source $file) -Destination (Join-Path $installRoot $file) -Force
     }
     $payloadRoot = Join-Path $installRoot 'payload'
     New-Item -ItemType Directory -Path $payloadRoot -Force | Out-Null
-    foreach ($file in @('subscriptionFormat.js', 'fetch-wrapper.js')) {
-        Copy-Item -LiteralPath (Join-Path $source ('payload\' + $file)) -Destination (Join-Path $payloadRoot $file) -Force
+    foreach ($file in @('subscriptionFormat.js', 'fetch-wrapper.js', 'fetch-wrapper-linux.js', 'vless.js', 'js-yaml.js', 'js-yaml.LICENSE')) {
+        $sourceFile = Join-Path $source ('payload\' + $file)
+        if (Test-Path -LiteralPath $sourceFile) {
+            Copy-Item -LiteralPath $sourceFile -Destination (Join-Path $payloadRoot $file) -Force
+        }
     }
     $configFile = Join-Path $installRoot 'config.json'
     if ($Target -or !(Test-Path -LiteralPath $configFile)) {
