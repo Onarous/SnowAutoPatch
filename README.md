@@ -40,6 +40,13 @@ curl -fsSL https://raw.githubusercontent.com/Onarous/SnowAutoPatch/main/install.
 curl -fsSL https://raw.githubusercontent.com/Onarous/SnowAutoPatch/main/install.sh | sudo bash
 ```
 
+> Пока Linux-версия не слита в `main`, замените `main` на имя ветки с
+> установщиком — иначе скачается страница «404: Not Found»:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/Onarous/SnowAutoPatch/feature/linux-support/install.sh | sudo bash
+> ```
+
 Node.js устанавливать не нужно: для проверки синтаксиса используется
 `node` из системы, а если его нет — сам Electron клиента (в нём тот же Node,
 запускаемый в режиме Node). Если нет и его, установщик скачает приватный
