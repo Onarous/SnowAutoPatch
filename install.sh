@@ -60,9 +60,15 @@ command -v tar >/dev/null 2>&1 || fail "Нужен tar."
 download() {
     local url="$1" dest="$2"
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL --retry 3 -o "$dest" "$url"
+        # -f: ошибка на HTTP 4xx/5xx, чтобы страница «404: Not Found» не
+        # попала в файл молча.
+        if ! curl -fsSL --retry 3 -o "$dest" "$url"; then
+            fail "Не удалось скачать: $url
+Если это main, а установщика там нет — укажите ветку с ним:
+  curl -fsSL https://raw.githubusercontent.com/Onarous/SnowAutoPatch/<ВЕТКА>/install.sh | bash"
+        fi
     else
-        wget -q -O "$dest" "$url"
+        wget -q -O "$dest" "$url" || fail "Не удалось скачать: $url"
     fi
 }
 
@@ -131,11 +137,22 @@ if [ -n "$SOURCE_DIR" ]; then
 else
     say "Скачивание SnowAutoPatch..."
     download "$SOURCE_URL" "$STAGING/source.zip"
+    # codeload отдаёт ZIP, а не tar.gz. Распаковываем правильным инструментом;
+    # иначе получаем мусор вместо исходников.
     mkdir -p "$STAGING/source"
-    tar -xzf "$STAGING/source.zip" -C "$STAGING/source" --strip-components=1
-    SOURCE="$STAGING/source"
+    if command -v unzip >/dev/null 2>&1; then
+        unzip -q "$STAGING/source.zip" -d "$STAGING/source" || fail "Не удалось распаковать архив."
+        # Внутри zip лежит каталог «SnowAutoPatch-<ветка>» — поднимаем его содержимое.
+        inner="$(find "$STAGING/source" -mindepth 1 -maxdepth 1 -type d | head -1)"
+        [ -n "$inner" ] && SOURCE="$inner" || SOURCE="$STAGING/source"
+    else
+        command -v bsdtar >/dev/null 2>&1 || fail "Нужен unzip или bsdtar для распаковки исходников."
+        bsdtar -xf "$STAGING/source.zip" -C "$STAGING/source" || fail "Не удалось распаковать архив."
+        inner="$(find "$STAGING/source" -mindepth 1 -maxdepth 1 -type d | head -1)"
+        [ -n "$inner" ] && SOURCE="$inner" || SOURCE="$STAGING/source"
+    fi
 fi
-[ -f "$SOURCE/autopatch.py" ] || fail "В исходниках нет autopatch.py."
+[ -f "$SOURCE/autopatch.py" ] || fail "В исходниках нет autopatch.py (плохой архив? Проверьте ветку с установщиком)."
 
 # ------------------------------------------------------------------ интерпретаторы
 
@@ -179,7 +196,7 @@ PY
     sha="${spec##* }"
     download "$url" "$STAGING/node.tar.gz"
     actual="$(sha256_of "$STAGING/node.tar.gz")"
-    [ "$actual" = "$sha" ] || fail "Контрольная сумма Node.js не совпала: $actual"
+    [ "$actual" = "$sha" ] || fail "Контрольная сумма Node.js не совпала: $actual (скачалось не то?)"
     tar -xzf "$STAGING/node.tar.gz" -C "$STAGING"
     NODE="$(find "$STAGING" -type f -name node -path '*/bin/node' | head -1)"
     [ -n "$NODE" ] || fail "В архиве Node.js не найден bin/node."
